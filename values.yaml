@@ -1,0 +1,7 @@
+logLevel: 6
+controller:
+  image: 473301030746.dkr.ecr.us-west-2.amazonaws.com/zd/k8s/ezswitch-controller
+  tag: 1.0.0.18085
+syncJob:
+  image: 473301030746.dkr.ecr.us-west-2.amazonaws.com/zd/k8s/sync-pvcs
+  tag: 1.0.0.18085

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: ezswitch-controller
+    control-plane: ezswitch-controller
+  name: zesty-ezswitch-controller
+  namespace: ezswitch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: ezswitch-controller
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: ezswitch-controller
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        - --leader-elect
+        - --health-probe-bind-address=:8082
+        - --sync-job-image={{ .Values.syncJob.image }}:{{.Values.syncJob.tag}}
+        - --v={{ .Values.logLevel }}
+        command:
+        - /manager
+        image: '{{ .Values.controller.image }}:{{ .Values.controller.tag }}'
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8082
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: zesty-ezswitch-ezswitch-controller
+      terminationGracePeriodSeconds: 10
