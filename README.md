@@ -5,7 +5,7 @@
 **Table of Contents**  
 - [Overview](#overview)  
 - [Prerequisites](#prerequisites)  
-- [Quickstart](#quickstart)  
+- [Installation](#installation)
   - [Kubectl-Zesty Plugin (Quickstart)](#kubectl-zesty-plugin-quickstart)  
   - [Manual Installation](#manual-installation)
     - [Add the Zesty repository to Helm](#add-the-zesty-ezswitch-repository-to-helm)
@@ -16,14 +16,14 @@
 - [The EZSwitch Custom Resource](#the-ezswitch-custom-resource)  
 - [Migration Phases (.status.status)](#migration-phases-statusstatus)  
 - [Commands](#commands)  
-  - [start](#start-stsname)  
-  - [migrate](#migrate-stsname)  
-  - [pause](#pause-stsname)  
-  - [resume](#resume-stsname)  
-  - [abort](#abort-stsname)  
-  - [rollback](#rollback-stsname)  
-  - [status](#status-stsname)  
-  - [set](#set-stsname)  
+  - [start](#start)
+  - [migrate](#migrate)
+  - [pause](#pause)
+  - [resume](#resume)
+  - [abort](#abort)
+  - [rollback](#rollback)
+  - [status](#status)
+  - [set](#set)
 - [Logging and Monitoring](#logging-and-monitoring)  
 - [GitOps and Version Control](#gitops-and-version-control)  
 - [Troubleshooting](#troubleshooting)  
@@ -58,7 +58,7 @@ This is best for quick, streamlined migrations via a set of helpful commands. Th
 Make sure kubectl zesty plugin is installed and up to date by following the kubectl zesty plugin installation steps: [kubectl-zesty plugin](https://github.com/zesty-co/kubectl-plugin)
 
 ```bash
-kubectl zesty ezswitch start <stsName> [--autoMigrate=<true|false>] [--set key=value ...]
+kubectl zesty ezswitch start <stsName> [--autoMigrate=<true|false>] [--helm-namespace=<namespace>] [--set key=value ...]
 ```
 For example:
 ```bash
@@ -80,9 +80,7 @@ helm repo update
 ```
 #### Install the chart
 ```bash
-helm install zesty-ezswitch \
-  [-n <NAMESPACE>] \
-  zestyezswitchrepo/zesty-ezswitch-helm
+helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/zesty-ezswitch-helm --create-namespace
 ```
 
 #### Helm installation flags
@@ -159,19 +157,20 @@ Below are the available commands, their flags, and descriptions.
 
 ### start <stsName>
 
-Starts the migration process, installing EZSwitch components (including the Helm chart if not already installed via the CLI approach) and creating the EZSwitch CR.
+Starts the migration process, installing EZSwitch components (including the Helm chart if not already installed) and creating the EZSwitch CR. By default all ezswitch resources will be on the `zesty-ezswitch` namespace
 
-| Flag             | Default           | Description                                                            |
-|------------------|-------------------|------------------------------------------------------------------------|
-| --autoMigrate    | true             | Run process automatically to completion if true.                       |
-| --stsNamespace   | default          | Namespace of the original STS.                                         |
-| --set key=value  | (none)           | Override Helm chart values during installation.                        |
-| --logLevel int   | 4                | Set the log level of ezswitch-controller.                              |
-| --zestyStsName   | <stsName>-zesty  | Name of the new Zesty-based STS.                                       |
+| Flag               | Default           | Description                                                            |
+|--------------------|-------------------|------------------------------------------------------------------------|
+| --autoMigrate      | true             | Run process automatically to completion if true.                        |
+| --stsNamespace     | default          | Namespace of the original STS.                                          |
+| --set key=value    | (none)           | Override Helm chart values during installation.                         |
+| --logLevel int     | 4                | Set the log level of ezswitch-controller.                               |
+| --zestyStsName     | <stsName>-zesty  | Name of the new Zesty-based STS.                                        |
+| --helm-namespace   | zesty-ezswitch   | Namespace where ezswitch resources will be created                      |
 
 **Example**:
 ```bash
-kubectl zesty ezswitch start myapp-sts --autoMigrate=false --set logLevel=4
+kubectl zesty ezswitch start myapp-sts --autoMigrate=false --helm-namespace=custom-namespace --set logLevel=4
 ```
 ### migrate <stsName>
 

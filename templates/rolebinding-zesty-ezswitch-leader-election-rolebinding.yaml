@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: ezswitch-controller
   name: zesty-ezswitch-leader-election-rolebinding
-  namespace: ezswitch
+  namespace: '{{ .Release.Namespace }}'
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -13,4 +13,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: zesty-ezswitch-ezswitch-controller
-  namespace: ezswitch
+  namespace: '{{ .Release.Namespace }}'

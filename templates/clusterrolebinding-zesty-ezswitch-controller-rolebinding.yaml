@@ -12,4 +12,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: zesty-ezswitch-ezswitch-controller
-  namespace: ezswitch
+  namespace: '{{ .Release.Namespace }}'
