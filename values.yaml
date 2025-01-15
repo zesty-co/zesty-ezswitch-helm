@@ -1,7 +1,8 @@
 logLevel: 6
+registry: 672188301118.dkr.ecr.eu-west-1.amazonaws.com
 controller:
-  image: 672188301118.dkr.ecr.eu-west-1.amazonaws.com/zd/k8s/ezswitch-controller
-  tag: 1.0.5
+  image: zd/k8s/ezswitch-controller
+  tag: 1.0.6
 syncJob:
-  image: 672188301118.dkr.ecr.eu-west-1.amazonaws.com/zd/k8s/sync-pvcs
-  tag: 1.0.5
+  image: zd/k8s/sync-pvcs
+  tag: 1.0.6

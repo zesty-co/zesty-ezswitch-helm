@@ -86,10 +86,10 @@ helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/zesty-ezswitch-he
 #### Helm installation flags
 | Key                | Default                                                                               | Description                                             |
 |--------------------|---------------------------------------------------------------------------------------|---------------------------------------------------------|
-| logLevel           | 6                                                                                      | Log level for the ezswitch-controller.                 |
-| controller.image   | 672188301118.dkr.ecr.eu-west-1.amazonaws.com/zd/k8s/ezswitch-controller               | The controller container image.                         |
+| logLevel           | 6                                                                                     | Log level for the ezswitch-controller.                 |
+| controller.image   | zd/k8s/ezswitch-controller                                                            | The controller container image.                         |
 | controller.tag     | latest                                                                                | The controller image tag.                               |
-| syncJob.image      | 672188301118.dkr.ecr.eu-west-1.amazonaws.com/zd/k8s/sync-pvcs                         | The sync job container image (for data migration).      |
+| syncJob.image      | zd/k8s/sync-pvcs                                                                      | The sync job container image (for data migration).      |
 | syncJob.tag        | latest                                                                                | The sync job image tag.                                 |
 
 
