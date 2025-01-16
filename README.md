@@ -11,19 +11,20 @@
     - [Add the Zesty repository to Helm](#add-the-zesty-ezswitch-repository-to-helm)
     - [Update a configured repository](#update-a-configured-repository)
     - [Install the chart](#install-the-chart)
-    - [Helm installation flags](#helm-installation-flags)
+    - [Helm Chart Values](#helm-chart-values)
+    - [EZSwitch Deletion](#ezswitch-deletion)
     - [Uninstalling the chart](#uninstalling-the-chart)
 - [The EZSwitch Custom Resource](#the-ezswitch-custom-resource)  
 - [Migration Phases (.status.status)](#migration-phases-statusstatus)  
 - [Commands](#commands)  
-  - [start](#start)
-  - [migrate](#migrate)
-  - [pause](#pause)
-  - [resume](#resume)
-  - [abort](#abort)
-  - [rollback](#rollback)
-  - [status](#status)
-  - [set](#set)
+  - [start](#start-stsname)
+  - [migrate](#migrate-stsname)
+  - [pause](#pause-stsname)
+  - [resume](#resume-stsname)
+  - [abort](#abort-stsname)
+  - [rollback](#rollback-stsname)
+  - [status](#status-stsname)
+  - [set](#set-stsname)
 - [Logging and Monitoring](#logging-and-monitoring)  
 - [GitOps and Version Control](#gitops-and-version-control)  
 - [Troubleshooting](#troubleshooting)  
@@ -84,7 +85,7 @@ helm repo update
 helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/zesty-ezswitch-helm --create-namespace
 ```
 
-#### Helm installation flags
+#### Helm Chart Values
 | Key                | Default                                                                               | Description                                             |
 |--------------------|---------------------------------------------------------------------------------------|---------------------------------------------------------|
 | logLevel           | 6                                                                                     | Log level for the ezswitch-controller.                 |
@@ -174,24 +175,24 @@ kubectl zesty ezswitch <command> <stsName> [flags]
 ```
 Below are the available commands, their flags, and descriptions.
 
-### start <stsName>
+### start \<stsName\>
 
 Starts the migration process, installing EZSwitch components (including the Helm chart if not already installed) and creating the EZSwitch CR. By default all ezswitch resources will be on the `zesty-ezswitch` namespace
 
 | Flag               | Default           | Description                                                            |
 |--------------------|-------------------|------------------------------------------------------------------------|
-| --autoMigrate      | true             | Run process automatically to completion if true.                        |
-| --stsNamespace     | default          | Namespace of the original STS.                                          |
-| --set key=value    | (none)           | Override Helm chart values during installation.                         |
-| --logLevel int     | 4                | Set the log level of ezswitch-controller.                               |
-| --zestyStsName     | <stsName>-zesty  | Name of the new Zesty-based STS.                                        |
-| --helm-namespace   | zesty-ezswitch   | Namespace where ezswitch resources will be created                      |
+| --autoMigrate      | true              | Run process automatically to completion if true.                        |
+| --stsNamespace     | default           | Namespace of the original STS.                                          |
+| --set key=value    | (none)            | Override [Helm chart values](#helm-chart-values) during installation.   |
+| --logLevel int     | 4                 | Set the log level of ezswitch-controller.                               |
+| --zestyStsName     | \<stsName\>-zesty | Name of the new Zesty-based STS.                                        |
+| --helm-namespace   | zesty-ezswitch    | Namespace where ezswitch resources will be created                      |
 
 **Example**:
 ```bash
 kubectl zesty ezswitch start myapp-sts --autoMigrate=false --helm-namespace=custom-namespace --set logLevel=4
 ```
-### migrate <stsName>
+### migrate \<stsName\>
 
 Resumes the migration if previously halted at `ReadyForMigration`.
 
@@ -203,7 +204,7 @@ Resumes the migration if previously halted at `ReadyForMigration`.
 ```bash
 kubectl zesty ezswitch migrate myapp-sts
 ```
-### pause <stsName>
+### pause \<stsName\>
 
 Pauses the ongoing migration.
 
@@ -215,7 +216,7 @@ Pauses the ongoing migration.
 ```bash
 kubectl zesty ezswitch pause myapp-sts
 ```
-### resume <stsName>
+### resume \<stsName\>
 
 Resumes a previously paused migration.
 
@@ -227,7 +228,7 @@ Resumes a previously paused migration.
 ```bash
 kubectl zesty ezswitch resume myapp-sts
 ```
-### abort <stsName>
+### abort \<stsName\>
 
 Aborts the current process before significantly impacting the original STS and cleans up created resources.
 
@@ -239,7 +240,7 @@ Aborts the current process before significantly impacting the original STS and c
 ```bash
 kubectl zesty ezswitch abort myapp-sts
 ```
-### rollback <stsName>
+### rollback \<stsName\>
 
 Attempts to revert to the original state if changes to the STS have begun.
 
@@ -255,7 +256,7 @@ Attempts to revert to the original state if changes to the STS have begun.
 ```bash
 kubectl zesty ezswitch rollback myapp-sts
 ```
-### status <stsName>
+### status \<stsName\>
 
 Displays the current migration status, including phase and sync progress.
 
@@ -267,7 +268,7 @@ Displays the current migration status, including phase and sync progress.
 ```bash
 kubectl zesty ezswitch status myapp-sts
 ```
-### set <stsName>
+### set \<stsName\>
 
 Modifies attributes of the `EZSwitch` CR.
 
