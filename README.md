@@ -53,7 +53,7 @@ EZSwitch operates as a Kubernetes Custom Resource (CR) managed by a controller. 
 EZSwitch can be set up in two main ways:
 
 ### Kubectl Zesty Plugin (Quickstart)
-This is best for quick, streamlined migrations via a set of helpful commands. These commands will install zesty-ezswitch-helm chart, create and edit ezswitch CRDs, report the migration and more. See the [commands](#commands) section for more info.
+This is best for quick, streamlined migrations via a set of helpful [commands](#commands). These commands will install `zesty-ezswitch-helm` chart, [create](#start) and edit [ezswitch CRDs](#the-ezswitch-custom-resource), report the [migration status](#status) and more. See the [commands](#commands) section for more info.
 
 Make sure kubectl zesty plugin is installed and up to date by following the kubectl zesty plugin installation steps: [kubectl-zesty plugin](https://github.com/zesty-co/kubectl-plugin)
 
@@ -65,6 +65,7 @@ For example:
 kubectl zesty ezswitch start myapp-sts --autoMigrate=false --set logLevel=4
 ```
 
+> If `--helm-namespace` flag is not set, the resources will be installed in `zesty-ezswitch` namespace.
 
 ### Manual Installation
 
@@ -129,9 +130,27 @@ To create it:
 ```bash
 kubectl apply -f ezswitch-resource.yaml
 ```
+
+When not using [zesty-plugin](#kubectl-zesty-plugin-quickstart), the migration behavior can be controlled using these fields:
+
+- **`.status.phase`**: 
+  - `Pausing` - Pauses ezswitch migration
+  - `Activating` - Resumes ezswitch migration
+  - `Active` - Set this value with `spec.autoMigrate=true` to resume the migration if migration paused due to `autoMigrate=false`
+- **`.spec.transferRateLimits`**: Limits the transfer rate of sync jobs in kb/s (uses rsync bwlimits arg behind the scenes). Delete this value to remove the limits
+
+### EZswitch Deletion
+```bash
+kubectl delete <ezswitch-name>
+```
+
+Deletion of EZSwitch resource in the middle of a migration will cause the migration process to rollback and revert all changes that were made.
+
+> Important: In order for the rollback to work properly, the starting statefulset must still exist.
+
 ---
 
-## Migration Phases (.status.status)
+## Migration Statuses (.status.status)
 
 1. **InstallRequirements**: Sets up necessary RBAC permissions and prerequisites.  
 2. **Init**: Creates corresponding PVCs under the Zesty storage class.  
@@ -252,9 +271,10 @@ kubectl zesty ezswitch status myapp-sts
 
 Modifies attributes of the `EZSwitch` CR.
 
-| Flag                 | Default | Description                       |
-|----------------------|---------|-----------------------------------|
-| --autoMigrate=<bool> | true    | Updates autoMigrate field.        |
+| Flag                        | Default | Description                                                |
+|-----------------------------|---------|------------------------------------------------------------|
+| --autoMigrate=<bool>        | true    | Updates autoMigrate field.                                 |
+| --transferRateLimits=<int>  | -1      | Updates transferRateLimits field (-1 will unset its value).|
 
 **Examples**:
 ```bash
@@ -304,18 +324,19 @@ When the migration completes or if you choose not to proceed, you can remove EZS
 
 1. **Helm Uninstall (if you installed manually)**:
 ```bash
-helm delete zesty-ezswitch [-n <NAMESPACE>]
+helm uninstall zesty-ezswitch [--helm-namespace <NAMESPACE>]
 ```
 2. **Using the EZSwitch CLI**:
 ```bash
 kubectl zesty ezswitch cleanup <stsName> [flags]
 ```
-| Flag              | Default | Description                                                           |
-|-------------------|---------|-----------------------------------------------------------------------|
-| --delete-old-sts  | false   | Deletes the old StatefulSet on cleanup.                               |
-| --force-abort     | false   | Forces abort of all EZSwitch resources before cleanup.                |
-| --keep-resources  | false   | Keeps EZSwitch resources instead of deleting them.                    |
-| --stsNamespace    | default | Namespace of the original STS.                                        |
+| Flag              | Default        | Description                                                           |
+|-------------------|----------------|-----------------------------------------------------------------------|
+| --helm-namespace  | zesty-ezswitch | Namespace of the original STS.                                        |
+| --delete-old-sts  | false          | Deletes the old StatefulSet on cleanup.                               |
+| --force-abort     | false          | Forces abort of all EZSwitch resources before cleanup.                |
+| --keep-resources  | false          | Keeps EZSwitch resources instead of deleting them.                    |
+| --stsNamespace    | default        | Namespace of the original STS.                                        |
 
 ---
 

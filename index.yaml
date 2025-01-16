@@ -2,6 +2,14 @@ apiVersion: v1
 entries:
   ezswitch:
   - apiVersion: v2
+    created: "2025-01-16T15:33:54.047505224Z"
+    description: A Helm chart for ezswitch-controller
+    digest: b30a7b593819ce17bd58445baf7a1f28869fafe36012d9d53f3e2f8fb4663815
+    name: ezswitch
+    urls:
+    - https://github.com/zesty-co/zesty-ezswitch-helm/releases/download/v1.0.12/ezswitch-1.0.12.tgz
+    version: 1.0.12
+  - apiVersion: v2
     created: "2025-01-16T09:48:44.789436411Z"
     description: A Helm chart for ezswitch-controller
     digest: f34006b50246fe2241ae07bf463e13639b0fab8cdbd21f83860277e6f8eb24a7
@@ -41,4 +49,4 @@ entries:
     urls:
     - https://github.com/zesty-co/zesty-ezswitch-helm/releases/download/v1.0.7/ezswitch-1.0.6.tgz
     version: 1.0.6
-generated: "2025-01-16T09:48:44.7880727Z"
+generated: "2025-01-16T15:33:54.046046921Z"
