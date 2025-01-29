@@ -117,7 +117,7 @@ An `EZSwitch` resource defines the desired migration behavior. Key fields includ
 **Example:**
 ```yaml
 apiVersion: storage.zesty.co/v1alpha1
-kind: EZSwitch
+kind: EZSwitch 
 metadata:
   name: myapp-sts-ezswitch
   namespace: default
@@ -139,6 +139,7 @@ When not using [zesty-plugin](#kubectl-zesty-plugin-quickstart), the migration b
   - `Activating` - Resumes ezswitch migration
   - `Active` - Set this value with `spec.autoMigrate=true` to resume the migration if migration paused due to `autoMigrate=false`
 - **`.spec.transferRateLimits`**: Limits the transfer rate of sync jobs in kb/s (uses rsync bwlimits arg behind the scenes). Delete this value to remove the limits
+- **`.spec.autoMigrate`**: When set initially, this field indicates whether the migration process is done fully-automatically or is semi-controlled (See [EZSwitch Custom Resource](#the-ezswitch-custom-resource) for more details). If semi-controller option is chosen (`autoMigrate=false`), set `.spec.autoMigrate` value to `true` to resume the migration process.
 
 ### EZswitch Deletion
 ```bash
@@ -163,7 +164,7 @@ Deletion of EZSwitch resource in the middle of a migration will cause the migrat
 8. **WaitingForZestySTS**: Deploys the new Zesty-based STS and waits for it to become fully ready.  
 9. **Success**: Cleans up finalizers and completes the migration.
 
-> **Note**: If `autoMigrate=false`, the process pauses at `ReadyForMigration` until resumed with the `migrate` command or by setting `autoMigrate=true` on the `EZSwitch` resource.
+> **Note**: If `autoMigrate=false`, the process pauses at `Syncing` until resumed with the `migrate` command or by setting `autoMigrate=true` on the `EZSwitch` resource.
 
 ---
 
