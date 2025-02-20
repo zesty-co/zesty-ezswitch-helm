@@ -8,12 +8,6 @@
 - [Installation](#installation)
   - [Kubectl-Zesty Plugin (Quickstart)](#kubectl-zesty-plugin-quickstart)  
   - [Manual Installation](#manual-installation)
-    - [Add the Zesty repository to Helm](#add-the-zesty-ezswitch-repository-to-helm)
-    - [Update a configured repository](#update-a-configured-repository)
-    - [Install the chart](#install-the-chart)
-    - [Helm Chart Values](#helm-chart-values)
-    - [EZSwitch Deletion](#ezswitch-deletion)
-    - [Uninstalling the chart](#uninstalling-the-chart)
 - [The EZSwitch Custom Resource](#the-ezswitch-custom-resource)  
 - [Migration Phases (.status.status)](#migration-phases-statusstatus)  
 - [Commands](#commands)  
@@ -25,67 +19,111 @@
   - [rollback](#rollback-stsname)
   - [status](#status-stsname)
   - [set](#set-stsname)
+- [Cleanup](#cleanup)  
 - [Logging and Monitoring](#logging-and-monitoring)  
-- [GitOps and Version Control](#gitops-and-version-control)  
+- [GitOps and Version Control](#gitops-and-version-control) 
 - [Troubleshooting](#troubleshooting)  
 - [Limitations and Considerations](#limitations-and-considerations)  
-- [Cleanup](#cleanup)  
 - [References](#references)  
 
 ---
 
 ## Overview
 
-EZSwitch’s primary purpose is to leverage Zesty’s auto-scaling storage solution ([zesty-disk](https://docs.zesty.co/docs/zesty-disk)). By migrating existing StatefulSets (STS) to Zesty Disk PersistentVolumeClaims (PVCs), your workloads gain the ability to automatically scale storage capacity as data usage grows or shrinks, eliminating the need for manual PVC resizing.
+EZSwitch's primary purpose is to leverage Zesty's auto-scaling storage solution ([Kompass Storge](https://docs.zesty.co/docs/storage-optimization)). By migrating existing StatefulSets (STS) to Kompass Storage PersistentVolumeClaims (PVCs), your workloads gain the ability to automatically scale storage capacity as data usage grows or shrinks, eliminating the need for manual PVC resizing.
 
 EZSwitch operates as a Kubernetes Custom Resource (CR) managed by a controller. It coordinates syncing jobs (using [rsync](https://github.com/RsyncProject/rsync) under the hood), the final switchover to a Zesty-based StatefulSet (with the same properties as the initial STS), and supports both automatic or manual migration phases.
 
 ---
 
 ## Prerequisites
-- **Zesty Helm Chart**: The [zesty-helm](https://github.com/zesty-co/zesty-helm) package must be installed and configured in your cluster. This provides the underlying Zesty Disk functionality that EZSwitch requires.
-- **Kubernetes Version**: Requires Kubernetes v1.24 or higher.
-- **Permissions**: Must have cluster-admin permissions to deploy and manage the EZSwitch controller and related CRDs.
-- **Namespace**: By default, EZSwitch and related components run in the `ezswitch` namespace.
----
+
+Before installing EZSwitch, ensure you have:
+
+1. **Kompass Storage**: Install and configure the [zesty-helm](https://github.com/zesty-co/zesty-helm) package in your cluster
+2. **Kubernetes**: Version 1.24 or higher
+3. **Permissions**: Cluster-admin access to deploy the controller and CRDs
+4. **Namespace**: The system will use the `zesty-ezswitch` namespace by default
 
 ## Installation
 
-EZSwitch can be set up in two main ways:
+Kompass Storage EZSwitch can be installed and operated in two ways:
+1. Automaticlly using the kubectl-zesty plugin (recommended for most users)
+2. Manual (recommended for GitOps workflows)
 
-### Kubectl Zesty Plugin (Quickstart)
-This is best for quick, streamlined migrations via a set of helpful [commands](#commands). These commands will install `zesty-ezswitch-helm` chart, [create](#start) and edit [ezswitch CRDs](#the-ezswitch-custom-resource), report the [migration status](#status) and more. See the [commands](#commands) section for more info.
+### Kubectl-Zesty Plugin (Quickstart)
+The kubectl-zesty plugin provides a streamlined command-line interface for EZSwitch operations. When using the plugin, it will:
+1. Install the `zesty-ezswitch-helm` chart automatically
+2. Create and manage the required [EZSwitch custom resources](#the-ezswitch-custom-resource)
+3. Provide easy access to [migration status](#status) and controls
 
-Make sure kubectl zesty plugin is installed and up to date by following the kubectl zesty plugin installation steps: [kubectl-zesty plugin](https://github.com/zesty-co/kubectl-plugin)
+Before starting, install the kubectl-zesty plugin:
+[kubectl-zesty plugin installation guide](https://github.com/zesty-co/kubectl-plugin)
 
+To begin a migration:
 ```bash
 kubectl zesty ezswitch start <stsName> [--autoMigrate=<true|false>] [--helm-namespace=<namespace>] [--set key=value ...]
 ```
-For example:
+
+Example:
 ```bash
 kubectl zesty ezswitch start myapp-sts --autoMigrate=false --set logLevel=4
 ```
 
-> If `--helm-namespace` flag is not set, the resources will be installed in `zesty-ezswitch` namespace.
+> **Note**: EZSwitch resources are installed in the `zesty-ezswitch` namespace by default. This can be overridden using the `--helm-namespace` option, as detailed in [commands](#commands).
 
 ### Manual Installation
 
-If you’d rather manage the Helm release directly (e.g., via GitOps, or you don’t wish to install the kubectl-zesty plugin), you can install the chart yourself:
+For users who prefer direct Helm management (such as GitOps workflows) or don't want to use the kubectl-zesty plugin, follow these steps:
 
-#### Add the Zesty Ezswitch repository to Helm
+#### 1. Add the Zesty EZSwitch repository to Helm.
 ```bash
+# Add the Helm repository
 helm repo add zestyezswitchrepo https://zesty-co.github.io/zesty-ezswitch-helm
+# Install EZSwitch
+helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/ezswitch
 ```
-#### Update a configured repository
-```bash
-helm repo update
+> **Note** Additional Helm settings can be found in the section [#helm-chart-values](#helm-chart-values)
+
+#### 2. Create EZSwitch CR
+Create a YAML file (for example, `ezswitch-resource.yaml`) that includes your EZSwitch configurations as outlined in [The EZSwitch Custom Resource](#the-ezswitch-custom-resource)
+
+Example:
+```yaml
+apiVersion: storage.zesty.co/v1alpha1
+kind: EZSwitch 
+metadata:
+  name
+  namespace: default # Namespace should match stsNamespace
+spec:
+  stsName: myapp-sts # Name of source statefulset to be migrated
+  stsNamespace: default # Namespace of source statefulset
+  autoMigrate: true # Sets migration process to migrate as soon as all data is copied
+  zestyStsName: myapp-sts-zesty # Name of target statefulset to migrate into
 ```
-#### Install the chart
+> **Note**: Setting `autoMigrate: true` will run the migration automatically from start to finish. Setting `autoMigrate: false` allows you to manually control when to proceed between migration phases. See full CR options in the section [#the-ezswitch-custom-resource](#the-ezswitch-custom-resource)
+
+#### 3. Apply the EZSwitch resource:
+The migration will start running once the EZswitch CR is applied
 ```bash
-helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/zesty-ezswitch-helm --create-namespace
+kubectl apply -f ezswitch-resource.yaml
 ```
 
-#### Helm Chart Values
+> **Note**: Deleting the EZSwitch resource during an ongoing migration will trigger a rollback, undoing all changes made so far. For the rollback to function correctly, the original StatefulSet must still be present.
+
+#### 4. Cleanup
+1. **Abort EZSwitch**
+```bash
+kubectl delete ezswitch <ezswitch-name>
+```
+2. **Uninstall Helm**:
+```bash
+helm uninstall zesty-ezswitch [--helm-namespace <NAMESPACE>]
+```
+
+---
+
+## Helm Chart Values
 | Key                | Default                                                                               | Description                                             |
 |--------------------|---------------------------------------------------------------------------------------|---------------------------------------------------------|
 | logLevel           | 6                                                                                     | Log level for the ezswitch-controller.                 |
@@ -94,61 +132,29 @@ helm install zesty-ezswitch [-n <NAMESPACE>] zestyezswitchrepo/zesty-ezswitch-he
 | syncJob.image      | zd/k8s/sync-pvcs                                                                      | The sync job container image (for data migration).      |
 | syncJob.tag        | latest                                                                                | The sync job image tag.                                 |
 
-
 > **Note**: The `logLevel` sets the verbosity level based on the [klog](https://github.com/kubernetes/klog) style. Higher numbers mean more verbose logs.
 
-#### Uninstalling the chart
-```bash
-helm delete zesty-ezswitch [-n <NAMESPACE>]
-```
 ---
 
 ## The EZSwitch Custom Resource
 
-An `EZSwitch` resource defines the desired migration behavior. Key fields include:
+An `EZSwitch` resource specifies the intended migration actions. Important fields are:
 
-- **`.spec.stsName`**: The original StatefulSet name.
-- **`.spec.stsNamespace`**: The original StatefulSet namespace.
+- **`.spec.stsName`**: Name of the original StatefulSet.
+- **`.spec.stsNamespace`**: Namespace of the original StatefulSet.
 - **`.spec.autoMigrate`**:  
-  - `true` (default): Fully automated process (sync, scale-down old STS, final sync, deploy new STS).
-  - `false`: Stops at `ReadyForMigration`, keeping the original STS running and PVCs continuously synced until you manually resume.
-- **`.spec.zestyStsName`**: The name of the new Zesty-backed StatefulSet (defaults to `<stsName>-zesty`).
+  - `true` (default): Executes a fully automated process (sync, scale down the old STS, final sync, deploy the new STS).
+  - `false`: Halts at `Syncing`, maintaining the original STS and continuously syncing PVCs until manually resumed.
+- **`.spec.zestyStsName`**: Name of the new Zesty-backed StatefulSet (defaults to `<stsName>-zesty`).
 
-**Example:**
-```yaml
-apiVersion: storage.zesty.co/v1alpha1
-kind: EZSwitch 
-metadata:
-  name: myapp-sts-ezswitch
-  namespace: default
-spec:
-  stsName: myapp-sts
-  stsNamespace: default
-  autoMigrate: true
-  zestyStsName: myapp-sts-zesty
-```
-To create it:
-```bash
-kubectl apply -f ezswitch-resource.yaml
-```
-
-When not using [zesty-plugin](#kubectl-zesty-plugin-quickstart), the migration behavior can be controlled using these fields:
+If not using the [zesty-plugin](#kubectl-zesty-plugin-quickstart), you can manage migration behavior with these fields:
 
 - **`.status.phase`**: 
   - `Pausing` - Pauses ezswitch migration
   - `Activating` - Resumes ezswitch migration
-  - `Active` - Set this value with `spec.autoMigrate=true` to resume the migration if migration paused due to `autoMigrate=false`
-- **`.spec.transferRateLimits`**: Limits the transfer rate of sync jobs in kb/s (uses rsync bwlimits arg behind the scenes). Delete this value to remove the limits
-- **`.spec.autoMigrate`**: When set initially, this field indicates whether the migration process is done fully-automatically or is semi-controlled (See [EZSwitch Custom Resource](#the-ezswitch-custom-resource) for more details). If semi-controller option is chosen (`autoMigrate=false`), set `.spec.autoMigrate` value to `true` to resume the migration process.
+- **`.spec.transferRateLimits`**: Specifies the maximum transfer rate for sync jobs in kb/s (utilizes rsync's bwlimit argument).
+- **`.spec.autoMigrate`**: Initially determines if the migration process is fully automated or semi-controlled. For semi-controlled migration (`autoMigrate=false`), change `.spec.autoMigrate` to `true` to continue the migration process.
 
-### EZswitch Deletion
-```bash
-kubectl delete <ezswitch-name>
-```
-
-Deletion of EZSwitch resource in the middle of a migration will cause the migration process to rollback and revert all changes that were made.
-
-> Important: In order for the rollback to work properly, the starting statefulset must still exist.
 
 ---
 
@@ -278,11 +284,30 @@ Modifies attributes of the `EZSwitch` CR.
 | --autoMigrate=<bool>        | true    | Updates autoMigrate field.                                 |
 | --transferRateLimits=<int>  | -1      | Updates transferRateLimits field (-1 will unset its value).|
 
-**Examples**:
+**Example**:
 ```bash
 # Disable automatic migration
 kubectl zesty ezswitch set myapp-sts --autoMigrate=false
 ```
+---
+
+### cleanup \<stsName\>
+
+Removes the `EZSwitch` CR.
+
+| Flag              | Default        | Description                                                           |
+|-------------------|----------------|-----------------------------------------------------------------------|
+| --helm-namespace  | zesty-ezswitch | Namespace of the original STS.                                        |
+| --delete-old-sts  | false          | Deletes the old StatefulSet on cleanup.                               |
+| --force-abort     | false          | Forces abort of all EZSwitch resources before cleanup.                |
+| --keep-resources  | false          | Keeps EZSwitch resources instead of deleting them.                    |
+| --stsNamespace    | default        | Namespace of the original STS.                                        |
+
+**Example**:
+```bash
+kubectl zesty ezswitch cleanup <stsName> [flags]
+```
+
 ---
 
 ## Logging and Monitoring
@@ -293,7 +318,7 @@ kubectl zesty ezswitch set myapp-sts --autoMigrate=false
 ```bash
 kubectl describe ezswitch myapp-sts
 ```
-> **Note**: Unlike Zesty Disk, there is no dedicated Prometheus exporter for EZSwitch.
+> **Note**: Unlike Kompass Storage, there is no dedicated Prometheus exporter for EZSwitch.
 
 ---
 
@@ -320,36 +345,14 @@ For GitOps workflows (e.g., Argo CD), commit `EZSwitch` resources to a Git repos
 
 ---
 
-## Cleanup
-
-When the migration completes or if you choose not to proceed, you can remove EZSwitch resources in two ways:
-
-1. **Helm Uninstall (if you installed manually)**:
-```bash
-helm uninstall zesty-ezswitch [--helm-namespace <NAMESPACE>]
-```
-2. **Using the EZSwitch CLI**:
-```bash
-kubectl zesty ezswitch cleanup <stsName> [flags]
-```
-| Flag              | Default        | Description                                                           |
-|-------------------|----------------|-----------------------------------------------------------------------|
-| --helm-namespace  | zesty-ezswitch | Namespace of the original STS.                                        |
-| --delete-old-sts  | false          | Deletes the old StatefulSet on cleanup.                               |
-| --force-abort     | false          | Forces abort of all EZSwitch resources before cleanup.                |
-| --keep-resources  | false          | Keeps EZSwitch resources instead of deleting them.                    |
-| --stsNamespace    | default        | Namespace of the original STS.                                        |
-
----
-
 ## References
 
 - **Zesty Official Documentation**:
-  - [Zesty Disk](https://docs.zesty.co/docs/zesty-disk)
-  - [Deploy Zesty Disk for Kubernetes](https://docs.zesty.co/docs/deploy-zesty-disk-for-k8s)
+  - [Kompass Storge](https://docs.zesty.co/docs/storage-optimization)
+  - [Deploy Kompass Storge for Kubernetes](https://docs.zesty.co/docs/deploy-pvs-autoscaling)
 - **Helm Repositories**:
   - [zesty-helm (GitHub)](https://github.com/zesty-co/zesty-helm)
 - **CLI Plugin**:
   - [kubectl-zesty plugin (GitHub)](https://github.com/zesty-co/kubectl-plugin)
 
-EZSwitch streamlines the path to auto-scaling storage with Zesty Disk. By following these commands and guidelines—whether via the CLI or Helm—you can seamlessly manage the entire migration lifecycle. Enjoy the benefits of automatic storage scaling with minimal manual overhead!
+EZSwitch streamlines the path to auto-scaling storage with Kompass Storge. By following these commands and guidelines—whether via the CLI or Helm—you can seamlessly manage the entire migration lifecycle. Enjoy the benefits of automatic storage scaling with minimal manual overhead!
